@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+# ws — Tmux Workspace Picker
+# Usage:
+#   ws              Interactive fzf picker
+#   ws <name>       Create/attach session directly
+#   ws --list       List all sessions
+#   ws --kill       Kill a session via fzf
+
+set -euo pipefail
+
+SESSIONS_DIR="$HOME/.config/tmux/sessions"
+
+# ─── Session Registry ───
+# Format: "name:template:directory"
+REGISTRY=(
+    "Arena:arena:~/.claude/arena/"
+    "KEportal:dev:~/Work/Dev/portal_v2"
+    "KEims:dev:~/Work/Dev/Ke-market"
+    "Cameroon:dev:~/Work/Dev/cameroon-market"
+    "SA-portal:dev:~/Work/Dev/SA-portal_v2"
+    "TZ-ims:dev:~/Work/Dev/Tz-market"
+    "Manenos:dev:~/Desktop/mine/manenos/"
+    "Claude:claude:~"
+    "Monitor:monitor:~"
+)
+
+# ─── Helpers ───
+
+get_active_sessions() {
+    tmux list-sessions -F '#S' 2>/dev/null || true
+}
+
+is_active() {
+    local name="$1"
+    local active
+    active=$(get_active_sessions)
+    echo "$active" | grep -qix "$name"
+}
+
+format_entry() {
+    local name="$1"
+    if is_active "$name"; then
+        echo "$name [active]"
+    else
+        echo "$name"
+    fi
+}
+
+create_session() {
+    local name="$1"
+    local template=""
+    local dir=""
+
+    # Find in registry (case-insensitive)
+    for entry in "${REGISTRY[@]}"; do
+        local reg_name="${entry%%:*}"
+        if [[ "${reg_name,,}" == "${name,,}" ]]; then
+            name="$reg_name"  # Use canonical name
+            local rest="${entry#*:}"
+            template="${rest%%:*}"
+            dir="${rest#*:}"
+            break
+        fi
+    done
+
+    if [[ -z "$template" ]]; then
+        echo "Unknown session: $name"
+        echo "Available: $(printf '%s\n' "${REGISTRY[@]}" | cut -d: -f1 | tr '\n' ' ')"
+        exit 1
+    fi
+
+    # Check if already running
+    if tmux has-session -t "$name" 2>/dev/null; then
+        attach_session "$name"
+        return
+    fi
+
+    # Launch template
+    case "$template" in
+        arena)
+            bash "${SESSIONS_DIR}/arena.sh"
+            return
+            ;;
+        dev)
+            bash "${SESSIONS_DIR}/dev.sh" "$name" "$dir"
+            ;;
+        claude)
+            bash "${SESSIONS_DIR}/claude.sh"
+            ;;
+        monitor)
+            bash "${SESSIONS_DIR}/monitor.sh"
+            ;;
+    esac
+
+    attach_session "$name"
+}
+
+attach_session() {
+    local name="$1"
+    if [[ -n "${TMUX:-}" ]]; then
+        tmux switch-client -t "$name"
+    else
+        tmux attach -t "$name"
+    fi
+}
+
+# ─── Commands ───
+
+cmd_list() {
+    echo "Workspaces:"
+    for entry in "${REGISTRY[@]}"; do
+        local name="${entry%%:*}"
+        local rest="${entry#*:}"
+        local template="${rest%%:*}"
+        local dir="${rest#*:}"
+        if is_active "$name"; then
+            printf "  \033[1;32m● %-12s\033[0m  [%s]  %s\n" "$name" "$template" "$dir"
+        else
+            printf "  \033[0;90m○ %-12s\033[0m  [%s]  %s\n" "$name" "$template" "$dir"
+        fi
+    done
+}
+
+cmd_kill() {
+    local sessions
+    sessions=$(get_active_sessions)
+    if [[ -z "$sessions" ]]; then
+        echo "No active sessions."
+        exit 0
+    fi
+
+    local target
+    target=$(echo "$sessions" | fzf --prompt="Kill session> " --height=40% --reverse --border)
+    if [[ -n "$target" ]]; then
+        tmux kill-session -t "$target"
+        echo "Killed: $target"
+    fi
+}
+
+cmd_picker() {
+    local entries=""
+    for entry in "${REGISTRY[@]}"; do
+        local name="${entry%%:*}"
+        entries+="$(format_entry "$name")"$'\n'
+    done
+
+    local selected
+    selected=$(echo "$entries" | sed '/^$/d' | fzf \
+        --prompt="Workspace> " \
+        --height=40% \
+        --reverse \
+        --border \
+        --header="Select a workspace (ESC to cancel)" \
+        --color="fg:#a9b1d6,bg:#1a1b26,hl:#7aa2f7,fg+:#c0caf5,bg+:#283457,hl+:#7aa2f7,info:#7dcfff,prompt:#7aa2f7,pointer:#bb9af7,marker:#9ece6a,spinner:#bb9af7,header:#565f89,border:#3b4261")
+
+    if [[ -n "$selected" ]]; then
+        # Strip [active] marker
+        local name="${selected%% \[active\]}"
+        create_session "$name"
+    fi
+}
+
+# ─── Main ───
+
+case "${1:-}" in
+    --list|-l)
+        cmd_list
+        ;;
+    --kill|-k)
+        cmd_kill
+        ;;
+    --help|-h)
+        echo "ws — Tmux Workspace Picker"
+        echo ""
+        echo "Usage:"
+        echo "  ws              Interactive workspace picker"
+        echo "  ws <name>       Create/attach to a session"
+        echo "  ws --list       List all workspaces"
+        echo "  ws --kill       Kill a session"
+        echo ""
+        echo "Sessions:"
+        for entry in "${REGISTRY[@]}"; do
+            printf "  %s\n" "${entry%%:*}"
+        done
+        ;;
+    "")
+        cmd_picker
+        ;;
+    *)
+        create_session "$1"
+        ;;
+esac

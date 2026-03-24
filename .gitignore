@@ -1,0 +1,8 @@
+*.swp
+*.swo
+*~
+.DS_Store
+arena/.claude/arena/agents/*.log
+arena/.claude/arena/agents/.panes
+arena/.claude/arena/current_theme
+nvim/.config/nvim/lazy-lock.json
