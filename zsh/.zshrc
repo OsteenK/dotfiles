@@ -118,6 +118,10 @@ alias rebootnow='sudo reboot'
 # If 'config' is a directory, this will open it in nvim's file explorer.
 alias vimconfig='nvim ~/.config/nvim/lua/config/init.lua' # Or options.lua, etc.
 alias n='nvim'
+alias cat='batcat'
+
+# Quick ask Claude: ?? <question>
+??() { claude -p "$*"; }
 alias db='dbeaver-ce'
 alias fls='yazi' # Assuming yazi is your file manager
 alias TEST='cd ~/Work/Dev/onfonv1-front\&bac/onfonmobile-support'
@@ -207,3 +211,6 @@ arena-despawn() {
     local agent="${1:?Usage: arena-despawn <agent_name>}"
     bash "$HOME/.claude/arena/scripts/agent-despawn.sh" "$agent"
 }
+
+# --- Docker Sandbox ---
+alias sandbox='docker compose -f ~/.claude/sandbox/docker-compose.yml run --rm claude-sandbox'

@@ -49,6 +49,9 @@ vim.g.clipboard = {
 vim.cmd([[let &t_Cs = "\e[4:3m"]])
 vim.cmd([[let &t_Ce = "\e[4:0m"]])
 
+-- Better diff display
+vim.opt.diffopt:append({ "algorithm:histogram", "indent-heuristic" })
+
 -- Add asterisks in block comments
 vim.opt.formatoptions:append({ "r" })
 

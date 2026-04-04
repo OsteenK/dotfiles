@@ -8,7 +8,16 @@ return {
     branch = "osaka",
     lazy = true,
     priority = 1000,
-    opts = { transparent = true },
+    opts = {
+      transparent = true,
+      on_highlights = function(hl, c)
+        -- Strong diff backgrounds (VC-style: visible on transparent bg)
+        hl.DiffAdd = { bg = "#1a3a2a", fg = "#a6e3a1", bold = true } -- green bg
+        hl.DiffDelete = { bg = "#3a1a1a", fg = "#f38ba8", bold = true } -- red bg
+        hl.DiffChange = { bg = "#1a2a3a", fg = "#89b4fa", bold = true } -- blue bg (changed lines)
+        hl.DiffText = { bg = "#3a3a1a", fg = "#f9e2af", bold = true } -- yellow bg (changed text within line)
+      end,
+    },
   },
 
   -- Tokyo Night (dark blue, very popular)

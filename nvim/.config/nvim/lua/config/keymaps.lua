@@ -81,7 +81,7 @@ keymap.set("n", "<C-f>", "<cmd>lua Snacks.picker.lines()<cr>", opts)
 keymap.set("n", "<C-b>", "<cmd>Neotree toggle<cr>", opts)
 
 -- Toggle terminal: Ctrl+`
-keymap.set({ "n", "t" }, "<C-`>", "<cmd>lua Snacks.terminal()<cr>", opts)
+keymap.set({ "n", "t" }, "<leader>t", "<cmd>lua Snacks.terminal()<cr>", opts)
 
 -- Close current tab: Ctrl+W
 keymap.set("n", "<C-w>w", "<cmd>tabclose<cr>", opts)
@@ -95,7 +95,41 @@ keymap.set("v", "<A-Down>", ":m '>+1<cr>gv=gv", opts)
 -- Duplicate line: Alt+Shift+Down
 keymap.set("n", "<A-S-Down>", "<cmd>t.<cr>", opts)
 
+-- Shift+Arrow selection (VSCode-style)
+keymap.set("n", "<S-Up>", "v<Up>", opts)
+keymap.set("n", "<S-Down>", "v<Down>", opts)
+keymap.set("n", "<S-Left>", "v<Left>", opts)
+keymap.set("n", "<S-Right>", "v<Right>", opts)
+keymap.set("v", "<S-Up>", "<Up>", opts)
+keymap.set("v", "<S-Down>", "<Down>", opts)
+keymap.set("v", "<S-Left>", "<Left>", opts)
+keymap.set("v", "<S-Right>", "<Right>", opts)
+keymap.set("i", "<S-Up>", "<Esc>v<Up>", opts)
+keymap.set("i", "<S-Down>", "<Esc>v<Down>", opts)
+keymap.set("i", "<S-Left>", "<Esc>v<Left>", opts)
+keymap.set("i", "<S-Right>", "<Esc>v<Right>", opts)
+
+-- Ctrl+Shift+Arrow: select by word/block
+keymap.set("n", "<C-S-Left>", "vb", opts)
+keymap.set("n", "<C-S-Right>", "ve", opts)
+keymap.set("v", "<C-S-Left>", "b", opts)
+keymap.set("v", "<C-S-Right>", "e", opts)
+
+-- Ctrl+C to copy selection to system clipboard
+keymap.set("v", "<C-c>", '"+y', opts)
+
 -- Select all: already Ctrl+A above
+-- ─────────────────────────────────────────────────────────────────────
+
+-- ── Terminal scrolling (Claude Code in nvim) ─────────────────────────
+-- Ctrl+Q exits terminal mode → normal mode (then use vim keys to scroll)
+keymap.set("t", "<C-q>", [[<C-\><C-n>]], opts)
+-- PageUp/PageDown scroll in terminal mode without leaving it
+keymap.set("t", "<PageUp>", [[<C-\><C-n><C-u>]], opts)
+keymap.set("t", "<PageDown>", [[<C-\><C-n><C-d>]], opts)
+-- Ctrl+Up/Down for smaller scroll jumps from terminal mode
+keymap.set("t", "<C-Up>", [[<C-\><C-n>5k]], opts)
+keymap.set("t", "<C-Down>", [[<C-\><C-n>5j]], opts)
 -- ─────────────────────────────────────────────────────────────────────
 
 -- Diagnostics
