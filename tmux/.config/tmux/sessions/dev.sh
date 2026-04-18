@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# dev.sh — 3-pane dev layout (parameterized)
+# dev.sh — Dev layout: nvim (70%) top, terminal (30%) bottom
 # Usage: dev.sh <session-name> <directory>
 set -euo pipefail
 
@@ -14,10 +14,16 @@ if [[ ! -d "$DIR" ]]; then
     exit 1
 fi
 
-# Create session
-tmux new-session -d -s "$SESSION" -c "$DIR"
+# Window name: git branch if available, else directory basename
+WIN_NAME=$(git -C "$DIR" branch --show-current 2>/dev/null) || true
+WIN_NAME="${WIN_NAME:-$(basename "$DIR")}"
 
-# Layout: single pane, full screen editor
-# Split when needed: Prefix+| (horizontal) or Prefix+- (vertical)
+# Create session with named window
+tmux new-session -d -s "$SESSION" -c "$DIR" -n "$WIN_NAME"
 
-tmux send-keys -t "$SESSION" "nvim ." Enter
+# Split: bottom terminal pane (30%)
+tmux split-window -t "$SESSION" -v -l 30% -c "$DIR"
+
+# Focus top pane (nvim)
+tmux select-pane -t "$SESSION:.1"
+tmux send-keys -t "$SESSION:.1" "nvim ." Enter

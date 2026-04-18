@@ -5,6 +5,9 @@
 #   ws <name>       Create/attach session directly
 #   ws --list       List all sessions
 #   ws --kill       Kill a session via fzf
+#   ws --save       Save all sessions for restore
+#   ws --restore    Restore sessions from last save
+#   ws --prune      Kill idle detached sessions
 
 set -euo pipefail
 
@@ -17,8 +20,14 @@ REGISTRY=(
     "KEportal:dev:~/Work/Dev/Ke-market/portal_v2"
     "KEims:dev:~/Work/Dev/Ke-market/INVENTORY/portal-v2"
     "Cameroon:dev:~/Work/Dev/cameroon-market/portal_v2"
-    "SA-portal:dev:~/Work/Dev/SA-portal_v2"
+    "SA-portal:dev:~/Work/Dev/SA-market/portal_v2"
+    "TZ-portal:dev:~/Work/Dev/Tz-market/portal_v2"
     "TZ-ims:dev:~/Work/Dev/Tz-market/IMS/portal-v2"
+    "Moz-portal:dev:~/Work/Dev/Moz-market/portal_v2"
+    "face-captcha:dev:~/Work/Dev/Packages/face-captcha"
+    "guide-capture:dev:~/Work/Dev/Packages/guide_capture"
+    "lock-solution:dev:~/Work/Dev/Packages/lock_solution_package"
+    "doc-signer:dev:~/Work/Dev/Packages/document-signer"
     "Manenos:dev:~/Desktop/mine/manenos/"
     "Claude:claude:~"
     "Monitor:monitor:~"
@@ -104,6 +113,8 @@ attach_session() {
     fi
 }
 
+SCRIPTS_DIR="$HOME/.config/tmux/scripts"
+
 # ─── Commands ───
 
 cmd_list() {
@@ -134,6 +145,50 @@ cmd_kill() {
     if [[ -n "$target" ]]; then
         tmux kill-session -t "$target"
         echo "Killed: $target"
+    fi
+}
+
+cmd_save() {
+    bash "$SCRIPTS_DIR/save-session.sh"
+    echo "Sessions saved."
+}
+
+cmd_restore() {
+    bash "$SCRIPTS_DIR/restore-session.sh"
+}
+
+cmd_prune() {
+    local sessions
+    sessions=$(tmux list-sessions -F '#{session_name}:#{session_attached}' 2>/dev/null) || {
+        echo "No sessions running."
+        return
+    }
+
+    local pruned=0
+    while IFS=: read -r name attached; do
+        # Skip attached sessions
+        [[ "$attached" != "0" ]] && continue
+
+        # Check if all panes are idle shells
+        local all_idle=true
+        while IFS= read -r cmd; do
+            case "$cmd" in
+                bash|zsh|sh|fish) ;;
+                *) all_idle=false; break ;;
+            esac
+        done < <(tmux list-panes -t "$name" -s -F '#{pane_current_command}' 2>/dev/null)
+
+        if $all_idle; then
+            tmux kill-session -t "$name"
+            echo "Pruned: $name"
+            ((pruned++))
+        fi
+    done <<< "$sessions"
+
+    if [[ $pruned -eq 0 ]]; then
+        echo "Nothing to prune — no idle detached sessions."
+    else
+        echo "Pruned $pruned session(s)."
     fi
 }
 
@@ -169,6 +224,15 @@ case "${1:-}" in
     --kill|-k)
         cmd_kill
         ;;
+    --save|-s)
+        cmd_save
+        ;;
+    --restore|-R)
+        cmd_restore
+        ;;
+    --prune|-p)
+        cmd_prune
+        ;;
     --help|-h)
         echo "ws — Tmux Workspace Picker"
         echo ""
@@ -177,6 +241,9 @@ case "${1:-}" in
         echo "  ws <name>       Create/attach to a session"
         echo "  ws --list       List all workspaces"
         echo "  ws --kill       Kill a session"
+        echo "  ws --save       Save all sessions"
+        echo "  ws --restore    Restore sessions from last save"
+        echo "  ws --prune      Kill idle detached sessions"
         echo ""
         echo "Sessions:"
         for entry in "${REGISTRY[@]}"; do
